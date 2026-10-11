@@ -10,7 +10,6 @@ def mask_logits_for_trie(
     id_to_token: dict[int, str],
     trie_node: TrieNode,
 ) -> list[float]:
-    print(f"Número de logits devueltos por el modelo: {len(logits)}")
     permitted: set[str] = get_valid_chars_from_trie(trie_node)
     final: list[float] = logits.copy()
     for i, _ in enumerate(logits):
@@ -23,7 +22,7 @@ def select_function(
     model: Small_LLM_Model,
     prompt_ids: list[int],
     id_to_token: dict[int, str],
-    func_names: list[str],
+    func_names: list[str]
 ) -> str:
     result: str = ""
     generated_ids = prompt_ids.copy()

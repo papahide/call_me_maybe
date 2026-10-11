@@ -55,6 +55,7 @@ class FileParsing():
     def write_output(results: list[ModelOutput], output_path: str) -> None:
         final_prompt: list[dict] = [i.model_dump() for i in results]
         try:
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
             with open(output_path, "w") as file:
                 json.dump(final_prompt, file, indent=2)
         except FileNotFoundError as err:

@@ -12,7 +12,8 @@ def mask_logits(
     id_to_token: dict[int, str],
     trie_node: TrieNode | None = None,
     current_bool: str | None = None,
-    param_type: ParameterType | None = None
+    param_type: ParameterType | None = None,
+    remaining_param: bool = True
 ) -> list[float]:
     permitted: set[str] = set()
     if curr_state == JsonState.OBJECT_KEY:
@@ -26,6 +27,13 @@ def mask_logits(
     else:
         permitted = JsonValidation.VALID_CHARS[curr_state]
     final: list[float] = logits.copy()
+    if curr_state in (JsonState.AFTER_VALUE,
+                  JsonState.OBJECT_VALUE,
+                  JsonState.IN_BOOL_VALUE):
+        if remaining_param:
+            permitted = permitted - {"}"}
+        else:
+            permitted = permitted - {","}
     for i, _ in enumerate(logits):
         if id_to_token.get(i) not in permitted:
             final[i] = -math.inf
