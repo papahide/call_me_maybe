@@ -1,17 +1,27 @@
-class FileReadError(Exception):
+class CallMeMaybeError(Exception):
+    """Base class for all errors of this project."""
     pass
 
-class FileWriteError(Exception):
+
+class FileReadError(CallMeMaybeError):
     pass
 
-class TrieError(Exception):
+
+class FileWriteError(CallMeMaybeError):
     pass
 
-class SchemaError(Exception):
+
+class TrieError(CallMeMaybeError):
     pass
 
-class BoolError(Exception):
+
+class SchemaError(CallMeMaybeError):
     pass
 
-class FuncSelectError(Exception):
+
+class BoolError(CallMeMaybeError):
+    pass
+
+
+class FuncSelectError(CallMeMaybeError):
     pass

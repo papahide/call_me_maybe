@@ -26,13 +26,14 @@ class FileParsing():
             raise FileReadError(f"File not found: {err}")
         except PermissionError as err:
             raise FileReadError(f"File insufficient "
-                                  f"permissions: {err}")
+                                f"permissions: {err}")
         except IsADirectoryError as err:
             raise FileReadError(f"File not found, "
-                                  f"'{file_name}' is a directory : {err}")
+                                f"'{file_name}' is a directory : {err}")
 
     @staticmethod
-    def parse_definitions(data: dict[str, Any] | list[Any]) -> list[FunctionDefinition]:
+    def parse_definitions(
+            data: dict[str, Any] | list[Any]) -> list[FunctionDefinition]:
         try:
             func: list[FunctionDefinition] = []
             for content in data:
@@ -53,7 +54,9 @@ class FileParsing():
 
     @staticmethod
     def write_output(results: list[ModelOutput], output_path: str) -> None:
-        final_prompt: list[dict] = [i.model_dump() for i in results]
+        final_prompt: list[dict[str, Any]] = [
+            i.model_dump() for i in results
+        ]
         try:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
             with open(output_path, "w") as file:
@@ -62,7 +65,7 @@ class FileParsing():
             raise FileWriteError(f"File not found: {err}")
         except PermissionError as err:
             raise FileWriteError(f"File insufficient "
-                                  f"permissions: {err}")
+                                 f"permissions: {err}")
         except IsADirectoryError as err:
             raise FileWriteError(f"File not found, "
-                                  f"'{output_path}' is a directory : {err}")
+                                 f"'{output_path}' is a directory : {err}")

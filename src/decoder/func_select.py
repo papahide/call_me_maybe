@@ -1,19 +1,20 @@
 from llm_sdk import Small_LLM_Model
-from .trie import build_trie, get_valid_chars_from_trie, TrieNode
+from .trie import build_trie, walk_trie, TrieNode
 from ..models import FunctionDefinition
 from .selector import get_token
 from ..errors import errors
 import math
+
 
 def mask_logits_for_trie(
     logits: list[float],
     id_to_token: dict[int, str],
     trie_node: TrieNode,
 ) -> list[float]:
-    permitted: set[str] = get_valid_chars_from_trie(trie_node)
     final: list[float] = logits.copy()
     for i, _ in enumerate(logits):
-        if id_to_token.get(i) not in permitted:
+        text = id_to_token.get(i)
+        if text is None or walk_trie(trie_node, text) is None:
             final[i] = -math.inf
     return final
 
@@ -33,12 +34,15 @@ def select_function(
         logits = model.get_logits_from_input_ids(generated_ids)
         logits_masked = mask_logits_for_trie(logits, id_to_token, curr_node)
         token: int = get_token(logits_masked)
-        curr_node = curr_node[id_to_token[token]]
-        if id_to_token[token][0] == "Ġ":
-            raise errors.TrieError("There cannot me a space in func name")
+        text = id_to_token[token]
+        next_node = walk_trie(curr_node, text)
+        if next_node is None:
+            raise errors.TrieError("Token outside the function trie")
+        curr_node = next_node
         generated_ids.append(token)
-        result = result + id_to_token[token]
+        result = result + text
     return result
+
 
 def find_function_by_name(
     func_defs: list[FunctionDefinition],

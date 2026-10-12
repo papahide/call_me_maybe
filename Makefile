@@ -7,9 +7,8 @@ PIP		= pip
 
 install:
 	@echo "Setting up environment with uv..."
-	$(UV) venv
 	$(UV) sync
-	@echo "Done. Run: source .venv/bin/activate"
+	@echo "Done."
 
 run:
 	$(UV) run $(PYTHON) -m $(PACKAGE)
@@ -19,14 +18,14 @@ debug:
 
 lint:
 
-	$(UV) run flake8 . --exclude=.venv
+	$(UV) run flake8 .
 	$(UV) run mypy . --warn-return-any --warn-unused-ignores \
 	                 --ignore-missing-imports \
 	                 --disallow-untyped-defs \
 	                 --check-untyped-defs
 
 lint-strict:
-	$(UV) run flake8 . --exclude=.venv
+	$(UV) run flake8 .
 	$(UV) run mypy . --strict
 
 clean:

@@ -1,5 +1,6 @@
 from ..errors import errors
 
+
 def get_valid_bool_char(current_bool: str | None) -> set[str]:
     if not current_bool:
         return {"t", "f"}
