@@ -1,27 +1,30 @@
 class CallMeMaybeError(Exception):
     """Base class for all errors of this project."""
-    pass
+
+
+class GenerationError(CallMeMaybeError):
+    """Raised when the generation does not finish in time."""
 
 
 class FileReadError(CallMeMaybeError):
-    pass
+    """Raised when an input file cannot be read or is not valid."""
 
 
 class FileWriteError(CallMeMaybeError):
-    pass
+    """Raised when the output file cannot be written."""
 
 
 class TrieError(CallMeMaybeError):
-    pass
+    """Raised when a trie is missing or a token leaves it."""
 
 
 class SchemaError(CallMeMaybeError):
-    pass
+    """Raised when a value does not match the function schema."""
 
 
 class BoolError(CallMeMaybeError):
-    pass
+    """Raised when a boolean value being written is not valid."""
 
 
 class FuncSelectError(CallMeMaybeError):
-    pass
+    """Raised when the chosen function does not exist."""

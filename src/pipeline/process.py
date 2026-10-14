@@ -12,13 +12,31 @@ def process_prompt(
     func_defs: list[FunctionDefinition],
     id_to_token: dict[int, str],
 ) -> ModelOutput:
+    """Turn a prompt into a function call.
+
+    It builds the chat text for the model, lets it choose the function
+    and generate its arguments, and then adjusts the numbers: ``number``
+    values become floats and ``integer`` values become integers.
+
+    Args:
+        model: Language model used for the generation.
+        prompt: Prompt written in natural language.
+        func_defs: All the available function definitions.
+        id_to_token: Maps each token id to its text.
+
+    Returns:
+        The prompt with the chosen function name and its parameters.
+    """
     names: list[str] = [func.name for func in func_defs]
     tools = "\n".join(
         json.dumps(func.model_dump(mode="json")) for func in func_defs
     )
     header = (
         "<|im_start|>system\n"
-        "You are a function-calling assistant. Available functions:\n"
+        "You are a function-calling assistant. "
+        "Copy text values exactly as written in the user request, "
+        "keeping the same upper and lower case. "
+        "Available functions:\n"
         f"<tools>\n{tools}\n</tools>\n"
         "For each call, return a json object within "
         "<tool_call></tool_call> tags:\n"
@@ -45,6 +63,9 @@ def process_prompt(
         param_type = function.parameters[key].type
         if param_type == ParameterType.NUMBER and isinstance(value, int):
             json_dict[key] = float(value)
+        elif (param_type == ParameterType.INTEGER
+              and isinstance(value, float)):
+            json_dict[key] = int(value)
     final = ModelOutput(
         prompt=prompt.prompt,
         name=function.name,
@@ -57,6 +78,17 @@ def process_prompts(prompts: list[PromptInput],
                     model: Small_LLM_Model,
                     func_defs: list[FunctionDefinition],
                     id_to_token: dict[int, str],) -> list[ModelOutput]:
+    """Process every prompt of the input file.
+
+    Args:
+        prompts: Prompts written in natural language.
+        model: Language model used for the generation.
+        func_defs: All the available function definitions.
+        id_to_token: Maps each token id to its text.
+
+    Returns:
+        One function call for each prompt, in the same order.
+    """
     processed: list[ModelOutput] = [
         process_prompt(model, prompt, func_defs,
                        id_to_token) for prompt in prompts]

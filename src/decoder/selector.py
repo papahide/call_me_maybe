@@ -6,6 +6,29 @@ from ..errors import errors
 import math
 
 
+def boost_token(
+    final: list[float],
+    logits: list[float],
+    id_to_token: dict[int, str],
+    char: str,
+) -> None:
+    """Give a character the best score of the tokens that start with it.
+
+    The model often wants a token that glues the character to other
+    ones, such as ``}}``. The score of ``char`` alone becomes the best
+    score of all those tokens.
+
+    Args:
+        final: Masked logits, modified in place.
+        logits: Original scores given by the model.
+        id_to_token: Maps each token id to its text.
+        char: The character to boost.
+    """
+    family = [i for i, t in id_to_token.items() if t.startswith(char)]
+    alone = next(i for i in family if id_to_token[i] == char)
+    final[alone] = max(logits[i] for i in family)
+
+
 def mask_logits(
     logits: list[float],
     curr_state: JsonState,
@@ -52,6 +75,7 @@ def mask_logits(
         permitted = JsonValidation.VALID_CHARS[curr_state]
     if curr_state in (JsonState.AFTER_VALUE,
                       JsonState.OBJECT_VALUE,
+                      JsonState.DECIMAL_VALUE,
                       JsonState.IN_BOOL_VALUE):
         if remaining_param:
             permitted = permitted - {"}"}
@@ -63,14 +87,20 @@ def mask_logits(
         if curr_state == JsonState.IN_STRING_VALUE:
             valid = (text is not None
                      and JsonValidation.is_valid_string_token(text))
+        elif (curr_state == JsonState.BEFORE_VALUE
+              and param_type in (ParameterType.NUMBER,
+                                 ParameterType.INTEGER)):
+            valid = (text is not None
+                     and text.lstrip(" ") in permitted)
         else:
             valid = text in permitted
         if not valid:
             final[i] = -math.inf
     if curr_state == JsonState.IN_STRING_VALUE:
-        quote_ids = [i for i, t in id_to_token.items() if t.startswith('"')]
-        close_id = next(i for i in quote_ids if id_to_token[i] == '"')
-        final[close_id] = max(logits[i] for i in quote_ids)
+        boost_token(final, logits, id_to_token, '"')
+    elif curr_state in (JsonState.OBJECT_VALUE, JsonState.DECIMAL_VALUE):
+        for char in permitted & {",", "}"}:
+            boost_token(final, logits, id_to_token, char)
     return final
 
 

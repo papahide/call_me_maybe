@@ -1,14 +1,31 @@
 from ..models import FunctionDefinition, PromptInput, ModelOutput
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel
 from ..errors import FileReadError, FileWriteError
 from pathlib import Path
 from typing import Any
 import json
 
 
-class FileParsing():
+class FileParsing(BaseModel):
+    """Read the input files and write the output file.
+
+    It only groups static methods, so it is never instantiated.
+    """
     @staticmethod
     def read_file(file_name: str) -> dict[str, Any] | list[Any]:
+        """Read a JSON file and return its content.
+
+        Args:
+            file_name: Path of the JSON file.
+
+        Returns:
+            The content of the file, already parsed.
+
+        Raises:
+            FileReadError: If the path is empty, the file is not a
+                ``.json`` file, it cannot be opened, it is empty or it
+                does not contain valid JSON.
+        """
         if not file_name:
             raise FileReadError("No file provided")
         file = Path(file_name)
@@ -30,10 +47,23 @@ class FileParsing():
         except IsADirectoryError as err:
             raise FileReadError(f"File not found, "
                                 f"'{file_name}' is a directory : {err}")
+        except UnicodeDecodeError as err:
+            raise FileReadError(f"File is not valid text: {err}")
 
     @staticmethod
     def parse_definitions(
             data: dict[str, Any] | list[Any]) -> list[FunctionDefinition]:
+        """Validate the function definitions read from a file.
+
+        Args:
+            data: Content of the functions definition file.
+
+        Returns:
+            One validated definition for each function.
+
+        Raises:
+            FileReadError: If an item is not a valid function definition.
+        """
         try:
             func: list[FunctionDefinition] = []
             for content in data:
@@ -44,6 +74,17 @@ class FileParsing():
 
     @staticmethod
     def parse_tests(data: dict[str, Any] | list[Any]) -> list[PromptInput]:
+        """Validate the prompts read from a file.
+
+        Args:
+            data: Content of the prompts file.
+
+        Returns:
+            One validated prompt for each item.
+
+        Raises:
+            FileReadError: If an item is not a valid prompt.
+        """
         try:
             test: list[PromptInput] = []
             for content in data:
@@ -54,6 +95,17 @@ class FileParsing():
 
     @staticmethod
     def write_output(results: list[ModelOutput], output_path: str) -> None:
+        """Write the results to a JSON file.
+
+        The folder of the file is created if it does not exist.
+
+        Args:
+            results: Function calls to save.
+            output_path: Path of the file to write.
+
+        Raises:
+            FileWriteError: If the file cannot be written.
+        """
         final_prompt: list[dict[str, Any]] = [
             i.model_dump() for i in results
         ]

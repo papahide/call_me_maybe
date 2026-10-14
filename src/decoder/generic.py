@@ -20,6 +20,8 @@ class JsonState(str, Enum):
         IN_STRING_VALUE: Inside a string value.
         OBJECT_VALUE: Inside a numeric value.
         AFTER_VALUE: String closed, only ``,`` or ``}`` can follow.
+        AFTER_DOT: Right after the decimal point, only digits can follow.
+        DECIMAL_VALUE: Inside the decimal part of a number.
         CLOSE: The object is complete.
     """
     START = "start"
@@ -31,6 +33,8 @@ class JsonState(str, Enum):
     IN_STRING_VALUE = "abc"
     OBJECT_VALUE = "number"
     AFTER_VALUE = "after_value"
+    AFTER_DOT = "after_dot"
+    DECIMAL_VALUE = "decimal"
     CLOSE = "close"
 
 
@@ -52,7 +56,9 @@ class JsonValidation(BaseModel):
         JsonState.BEFORE_VALUE: set(string.digits) | {"\"", "-"},
         JsonState.IN_BOOL_VALUE: set(),
         JsonState.IN_STRING_VALUE: set(string.printable) | {"\""},
-        JsonState.OBJECT_VALUE: set(string.digits) | {",", "}"},
+        JsonState.OBJECT_VALUE: set(string.digits) | {",", "}", "."},
+        JsonState.AFTER_DOT: set(string.digits),
+        JsonState.DECIMAL_VALUE: set(string.digits) | {",", "}"},
         JsonState.AFTER_VALUE: {",", "}"},
         JsonState.CLOSE: {"}"}
     }
@@ -60,7 +66,8 @@ class JsonValidation(BaseModel):
     VALUE_START_CHARS: ClassVar[dict[ParameterType, set[str]]] = {
         ParameterType.STRING: {'"'},
         ParameterType.NUMBER: set(string.digits) | {"-"},
-        ParameterType.BOOLEAN: {"t", "f"}
+        ParameterType.BOOLEAN: {"t", "f", "true", "false"},
+        ParameterType.INTEGER: set(string.digits) | {"-"},
     }
 
     STRING_CHARS: ClassVar[set[str]] = set(string.printable) - {'"', "\\"}
@@ -103,9 +110,18 @@ class Transitions(BaseModel):
            JsonState.OBJECT_VALUE for d in string.digits},
         (JsonState.BEFORE_VALUE, "t"): JsonState.IN_BOOL_VALUE,
         (JsonState.BEFORE_VALUE, "f"): JsonState.IN_BOOL_VALUE,
+        (JsonState.BEFORE_VALUE, "true"): JsonState.AFTER_VALUE,
+        (JsonState.BEFORE_VALUE, "false"): JsonState.AFTER_VALUE,
         (JsonState.IN_STRING_VALUE, "\""): JsonState.AFTER_VALUE,
         (JsonState.OBJECT_VALUE, ","): JsonState.START_OBJK,
         (JsonState.OBJECT_VALUE, "}"): JsonState.CLOSE,
+        (JsonState.IN_BOOL_VALUE, ","): JsonState.START_OBJK,
+        (JsonState.IN_BOOL_VALUE, "}"): JsonState.CLOSE,
+        (JsonState.OBJECT_VALUE, "."): JsonState.AFTER_DOT,
+        **{(JsonState.AFTER_DOT, d):
+           JsonState.DECIMAL_VALUE for d in string.digits},
+        (JsonState.DECIMAL_VALUE, ","): JsonState.START_OBJK,
+        (JsonState.DECIMAL_VALUE, "}"): JsonState.CLOSE,
         (JsonState.AFTER_VALUE, ","): JsonState.START_OBJK,
         (JsonState.AFTER_VALUE, "}"): JsonState.CLOSE,
     }
@@ -120,10 +136,13 @@ class Transitions(BaseModel):
         Args:
             curr_state: State before generating the token.
             value: Text of the generated token.
+            Before a value, spaces at the start of the token are ignored.
 
         Returns:
             The next state, or ``curr_state`` if there is no transition.
         """
         if curr_state == JsonState.IN_STRING_VALUE:
             value = value[-1]
+        elif curr_state == JsonState.BEFORE_VALUE:
+            value = value.lstrip(" ")
         return Transitions.TRANSITIONS.get((curr_state, value), curr_state)

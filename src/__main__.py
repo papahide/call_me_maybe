@@ -11,6 +11,16 @@ import sys
 
 
 def run() -> None:
+    """Read the input files, process every prompt and save the result.
+
+    The paths come from the command line arguments
+    ``--functions_definition``, ``--input`` and ``--output``, which
+    have default values.
+
+    Raises:
+        CallMeMaybeError: If a file cannot be read or written, or if
+            the generation fails.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--functions_definition",
                         default="data/input/functions_definition.json")
@@ -49,6 +59,11 @@ def run() -> None:
 
 
 def main() -> None:
+    """Run the program and show the errors as clear messages.
+
+    Expected errors are printed to stderr and the program exits with
+    code 1. If the user interrupts it, the exit code is 130.
+    """
     try:
         run()
     except errors.CallMeMaybeError as err:
